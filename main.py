@@ -2,20 +2,48 @@ import customtkinter as ctk
 import tkinter as tk
 import threading
 import time
+
+import cv2
 import keyboard
 import mouse
 import os
-from PIL import ImageGrab
 import datetime
+import mss
+import glob
+import numpy as np
+
+import MORSE_TOOLS
+
+last_screenshot_path = None  # 全局变量，保存上一个截图路径
 
 def stop_anticheat_service():
     os.system("sc stop AntiCheatExpert")
 
 def screenshot_game():
-    img = ImageGrab.grab()
-    filename = f"screenshot_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-    img.save(filename)
-    print(f"截图保存为 {filename}")
+    global last_screenshot_path
+    if last_screenshot_path and os.path.exists(last_screenshot_path):
+        os.remove(last_screenshot_path)
+        print(f"已删除上一张截图：{last_screenshot_path}")
+
+    with mss.mss() as sct:
+        monitor = sct.monitors[1]  # 主屏幕
+        screenshot = sct.grab(monitor)
+        img = mss.tools.to_png(screenshot.rgb, screenshot.size)
+        sct_img = sct.grab(monitor)
+        img2 = np.array(sct_img)
+
+        # 转换为灰度图（只保留亮度）
+        gray = cv2.cvtColor(img2, cv2.COLOR_BGRA2GRAY)
+        morse_codes, digits = MORSE_TOOLS.extract_three_groups_and_decode(gray, method="simple_cluster")
+        print("\n最终结果：")
+        print("摩斯码：", morse_codes)
+        print("数字：", digits)
+
+        filename = f"screenshot_delta_force_tools_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        with open(filename, "wb") as f:
+            f.write(img)
+        last_screenshot_path = filename
+        print(f"截图保存为 {filename}")
 
 class AutoClicker:
     def __init__(self):
@@ -167,6 +195,20 @@ class App(ctk.CTk):
 
         mouse.hook(on_mouse_event)
         mouse.wait()
+
+    def quit(self):
+        self.cleanup_screenshots()
+        self.destroy()
+
+    def cleanup_screenshots(self):
+        count = 0
+        for file in glob.glob("screenshot_delta_force_tools_*.png"):
+            try:
+                os.remove(file)
+                count += 1
+            except Exception as e:
+                print(f"无法删除 {file}：{e}")
+        print(f"退出前共删除截图文件：{count} 张")
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("dark")

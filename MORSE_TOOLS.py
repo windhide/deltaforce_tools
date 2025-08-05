@@ -77,12 +77,11 @@ def decode_morse_from_image(image, method='kmeans'):
 
 
 def extract_three_groups_and_decode(gray_img, method='kmeans'):
-    h, w = gray_img.shape[:2]
-    top = 160
-    bottom = 200
-    group_width = 170
-    spacing = 35
-    group1_x = 40
+    top = 510
+    bottom = 570
+    group_width = 200
+    spacing = 65
+    group1_x = 700
     group2_x = group1_x + group_width + spacing
     group3_x = group2_x + group_width + spacing
 
@@ -106,27 +105,27 @@ def extract_three_groups_and_decode(gray_img, method='kmeans'):
 
 
 def show_debug_window(gray, group_data):
-    pass
-    # h, w = gray.shape
-    # scale = 0.5
-    # resized = cv2.resize(gray, (int(w * scale), int(h * scale)))
-    # cv2.imshow("原图（灰度）", resized)
-    #
-    # for i, (roi, binary, code, digit) in enumerate(group_data):
-    #     cv2.imshow(f"区域{i + 1}-原图", roi)
-    #     cv2.imshow(f"区域{i + 1}-二值", binary)
-    #     print(f"区域{i + 1} 摩斯码: {code} → 数字: {digit}")
-    #
-    # print("按任意键退出调试窗口...")
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    # pass
+    h, w = gray.shape
+    scale = 0.5
+    resized = cv2.resize(gray, (int(w * scale), int(h * scale)))
+    cv2.imshow("原图（灰度）", resized)
+
+    for i, (roi, binary, code, digit) in enumerate(group_data):
+        cv2.imshow(f"{i + 1}-original", roi)
+        cv2.imshow(f"{i + 1}-debug", binary)
+        print(f"区域{i + 1} 摩斯码: {code} → 数字: {digit}")
+
+    print("按任意键退出调试窗口...")
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
     import time
     start_time = time.time()
 
-    img = cv2.imread("QQ20250805-114248.png")
+    img = cv2.imread("screenshot_delta_force_tools_20250805_223823.png")
     if img is None:
         print("无法读取图像")
         exit()

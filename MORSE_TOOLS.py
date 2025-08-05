@@ -1,10 +1,13 @@
 import cv2
+import keyboard
+import mss
 import numpy as np
+import time
 
 MORSE_CODE_DICT = {
     '-----': '0',
     '.----': '1',
-    '..---': '2',
+    '..--': '2',
     '...--': '3',
     '....-': '4',
     '.....': '5',
@@ -13,6 +16,37 @@ MORSE_CODE_DICT = {
     '---..': '8',
     '----.': '9'
 }
+
+
+def screenshot_game_and_sendCode():
+    try:
+        with mss.mss() as sct:
+            monitor = sct.monitors[1]  # 主屏幕
+            sct_img = sct.grab(monitor)
+            img2 = np.array(sct_img)
+
+            # 转换为灰度图（只保留亮度）
+            _gray = cv2.cvtColor(img2, cv2.COLOR_BGRA2GRAY)
+            _morse_codes, _digits = extract_three_groups_and_decode(_gray, method="simple_cluster")
+
+            # 检查 _morse_codes 是否为空，如果为空则打印警告但不直接返回
+            if not all(_morse_codes):
+                print("⚠️ 警告: 摩斯码识别结果为空或部分为空，可能未识别到有效信息。")
+
+            # 过滤掉无效的数字（例如 \'?\'）
+            valid_digits = [d for d in _digits if d != '\'?']
+
+            if valid_digits:
+                for digit in valid_digits:
+                    keyboard.send(f"num {digit}")
+                    time.sleep(0.06)
+                print(f"✅ 成功发送数字: {valid_digits}")
+            else:
+                print("❌ 未识别到任何有效数字可发送。")
+
+    except Exception as ex:
+        print(f"❌ 截图或摩斯码识别过程中发生错误: {ex}")
+
 
 def decode_morse_from_image(image, method='kmeans'):
     _, binary = cv2.threshold(image, 86, 255, cv2.THRESH_BINARY)
@@ -38,33 +72,63 @@ def decode_morse_from_image(image, method='kmeans'):
 
     lengths = [end - start for start, end in bars]
     print("识别到的线段长度：", lengths)
+    if len(lengths) > 5:
+        print("⚠️ 警告: 识别到的线段数量过多，可能为噪声。")
+        return '', binary
 
     if method == 'kmeans':
-        # sklearn KMeans
         from sklearn.cluster import KMeans
         data = np.array(lengths).reshape(-1, 1)
-        kmeans = KMeans(n_clusters=2, n_init='auto').fit(data)
+        # 尝试使用 n_init='auto' 或明确指定 n_init
+        kmeans = KMeans(n_clusters=2, n_init=10, random_state=0).fit(data)
         centers = kmeans.cluster_centers_
         labels = kmeans.labels_
+
+        # 确保 dot_label 总是指向较小的中心
         dot_label = np.argmin(centers)
-        symbols = ['.' if label == dot_label else '-' for label in labels]
+        dash_label = np.argmax(centers)
+
+        # 如果两个中心非常接近，或者只有一个有效的簇，则全部视为点
+        if abs(centers[0] - centers[1]) < 5 or len(np.unique(labels)) == 1:
+            symbols = ['.' for _ in lengths]  # 全部视为点
+        else:
+            symbols = ['.' if label == dot_label else '-' for label in labels]
 
     elif method == 'simple_cluster':
-        # 简易两类聚类
         lengths_np = np.array(lengths)
-        mean_len = lengths_np.mean()
-        cluster1 = lengths_np[lengths_np <= mean_len]
-        cluster2 = lengths_np[lengths_np > mean_len]
-        center1 = cluster1.mean() if len(cluster1) > 0 else 0
-        center2 = cluster2.mean() if len(cluster2) > 0 else 0
-        dot_label = 0 if center1 < center2 else 1
-        symbols = []
-        for l in lengths_np:
-            label = 0 if abs(l - center1) < abs(l - center2) else 1
-            symbols.append('.' if label == dot_label else '-')
+
+        # 如果所有长度都相同或非常接近
+        if np.std(lengths_np) < 3:  # 使用标准差判断是否为单一长度
+            # 进一步判断这个单一长度是短线还是长线
+            # 假设短线和长线有一个大致的比例关系，例如长线是短线的2-3倍
+            # 我们可以根据所有线段长度的平均值或中位数来动态判断
+            median_len = np.median(lengths_np)
+
+            # 设定一个阈值，例如如果单一长度大于中位数的1.5倍，则认为是长线
+            # 这个阈值可能需要根据实际情况调整
+            # 这里的逻辑是：如果所有线段长度都一样，且这个长度相对较大，就认为是长线
+            # 否则认为是短线
+            if median_len > 20:  # 假设大于20像素的单一长度更可能是长线
+                symbols = ['-' for _ in lengths]
+            else:
+                symbols = ['.' for _ in lengths]
+        else:
+            # 否则，进行聚类
+            mean_len = lengths_np.mean()
+            cluster1 = lengths_np[lengths_np <= mean_len]
+            cluster2 = lengths_np[lengths_np > mean_len]
+
+            center1 = cluster1.mean() if len(cluster1) > 0 else 0
+            center2 = cluster2.mean() if len(cluster2) > 0 else 0
+
+            # 确保 dot_label 总是指向较小的中心
+            dot_label = 0 if center1 < center2 else 1
+            symbols = []
+            for l in lengths_np:
+                label = 0 if abs(l - center1) < abs(l - center2) else 1
+                symbols.append('.' if label == dot_label else '-')
 
     elif method == 'threshold':
-        # 简单阈值
         min_len = min(lengths)
         max_len = max(lengths)
         threshold_len = (min_len + max_len) / 2
@@ -105,24 +169,24 @@ def extract_three_groups_and_decode(gray_img, method='kmeans'):
 
 
 def show_debug_window(gray, group_data):
-    # pass
-    h, w = gray.shape
-    scale = 0.5
-    resized = cv2.resize(gray, (int(w * scale), int(h * scale)))
-    cv2.imshow("原图（灰度）", resized)
-
-    for i, (roi, binary, code, digit) in enumerate(group_data):
-        cv2.imshow(f"{i + 1}-original", roi)
-        cv2.imshow(f"{i + 1}-debug", binary)
-        print(f"区域{i + 1} 摩斯码: {code} → 数字: {digit}")
-
-    print("按任意键退出调试窗口...")
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    return
+    # h, w = gray.shape
+    # scale = 0.5
+    # resized = cv2.resize(gray, (int(w * scale), int(h * scale)))
+    # cv2.imshow("原图（灰度）", resized)
+    #
+    # for i, (roi, binary, code, digit) in enumerate(group_data):
+    #     cv2.imshow(f"{i + 1}-original", roi)
+    #     cv2.imshow(f"{i + 1}-debug", binary)
+    #     print(f"区域{i + 1} 摩斯码: {code} → 数字: {digit}")
+    #
+    # print("按任意键退出调试窗口...")
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
-    import time
+
     start_time = time.time()
 
     img = cv2.imread("screenshot_delta_force_tools_20250805_223823.png")
@@ -139,6 +203,12 @@ if __name__ == "__main__":
     print("\n最终结果：")
     print("摩斯码：", morse_codes)
     print("数字：", digits)
+    for number in digits:
+        print(number)
 
     end_time = time.time()
     print(f"\n执行耗时：{end_time - start_time:.3f} 秒")
+
+
+
+

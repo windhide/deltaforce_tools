@@ -3,7 +3,7 @@
 
 ![:name](https://count.getloli.com/@deltaforce_tools?name=deltaforce_tools&theme=capoo-1&padding=6&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
-# deltaforce_tools
+# ✨三角洲小助手✨
 
 _✨ [deltaforce_tools]([https://github.com/AstrBotDevs/AstrBot](https://github.com/windhide/deltaforce_tools)) 三角洲小助手 ✨_  
 
@@ -12,8 +12,11 @@ _✨ [deltaforce_tools]([https://github.com/AstrBotDevs/AstrBot](https://github.
 [![GitHub](https://img.shields.io/badge/作者-WindHide-blue)](https://github.com/windhide)
 
 </div>
+# 创建项目的原因
 
-# Morse Keyboard Assistant
+一切的一切还要从好基友和我开同一个电脑，我速度开的没他快，从我嘴里掏走2个实验数据说起
+
+# 介绍
 
 一个基于 Python 的辅助工具，集成键盘监听与图像识别功能，用于自动执行预设操作和解析摩斯密码输入。适用于各类自动化场景、个人研究或兴趣开发，不涉及任何游戏或软件的修改行为。
 

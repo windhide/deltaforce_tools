@@ -51,7 +51,7 @@ class AutoClicker:
     def click_loop(self):
         try:
             while self.clicking.is_set():
-                mouse.click('left')
+                keyboard.send('f')
                 time.sleep(self.click_interval)
         except Exception as e:
             print(f"❌ 点击循环中发生错误: {e}")

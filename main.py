@@ -61,7 +61,6 @@ class App(ctk.CTk):
 
         self.build_ui()
 
-        threading.Thread(target=self.mouse_listener_thread, daemon=True).start()
         threading.Thread(target=self.global_keyboard_listener, daemon=True).start()
 
     def build_ui(self):
@@ -104,7 +103,7 @@ class App(ctk.CTk):
         autoclicker_frame.pack(fill='x', **padding)
 
         self.autoclicker_switch = ctk.CTkSwitch(autoclicker_frame,
-                                                text="抢物品👉按鼠标下侧键自动点击左键",
+                                                text="连点器👉长按F超过0.5秒就不停的按F",
                                                 variable=self.autoclicker_enabled,
                                                 command=self.on_autoclicker_toggle,)
         self.autoclicker_switch.pack(side='left', padx=5)
@@ -182,7 +181,7 @@ class App(ctk.CTk):
         else:
             print("自动点击已关闭")
             self.speed_slider.configure(state='disabled')
-            self.autoclicker.stop_clicking()
+            # self.autoclicker.stop_clicking() # 这里不需要停止，因为逻辑改由键盘监听器处理
 
     def on_speed_change(self, value):
         interval = float(value)
@@ -239,7 +238,23 @@ class App(ctk.CTk):
             print("[DEBUG] Screenshot is disabled, ignoring trigger")
 
     def global_keyboard_listener(self):
+        f_key_press_time = None
+        f_key_thread = None
+
+        def f_press_handler():
+            nonlocal f_key_press_time
+            f_key_press_time = time.time()
+            while keyboard.is_pressed('f'):
+                if self.autoclicker_enabled.get() and time.time() - f_key_press_time > 0.5:
+                    if not self.autoclicker._is_clicking_active:
+                        self.autoclicker.start_clicking()
+                time.sleep(0.01)
+            # 循环结束后（意味着按键被松开），停止点击
+            if self.autoclicker._is_clicking_active:
+                self.autoclicker.stop_clicking()
+
         def on_key(e):
+            nonlocal f_key_press_time, f_key_thread
             # 截图快捷键
             if self.screenshot_enabled.get() and e.event_type == 'down' and e.name == self.shortcut_key:
                 print(f"[DEBUG] Key '{self.shortcut_key}' pressed, triggering screenshot")
@@ -255,41 +270,15 @@ class App(ctk.CTk):
                     if self.autoclicker._is_alt_d_active:
                         print("[DEBUG] ` key up, stopping alt+d")
                         self.autoclicker.stop_alt_d()
+            
+            # 连点器快捷键
+            if self.autoclicker_enabled.get() and e.name == 'f':
+                if e.event_type == 'down':
+                    if f_key_thread is None or not f_key_thread.is_alive():
+                        f_key_thread = threading.Thread(target=f_press_handler, daemon=True)
+                        f_key_thread.start()
 
         keyboard.hook(on_key)
-
-    def mouse_listener_thread(self):
-        import time
-
-        def on_mouse_event(event):
-            try:
-                # 先过滤无效事件（没有 event_type 或 button）
-                if not (hasattr(event, 'event_type') and hasattr(event, 'button')):
-                    return
-
-                print(f"[DEBUG] Mouse event: {event.event_type} {event.button}")
-
-                # 抢物品（自动点击）
-                if event.button == 'x': # 鼠标下侧键
-                    if self.autoclicker_enabled.get():
-                        if event.event_type == 'down':
-                            if not self.autoclicker._is_clicking_active:
-                                print("[DEBUG] Mouse x button down, starting clicking")
-                                self.autoclicker.start_clicking()
-                        elif event.event_type == 'up':
-                            if self.autoclicker._is_clicking_active:
-                                print("[DEBUG] Mouse x button up, stopping clicking")
-                                self.autoclicker.stop_clicking()
-
-            except Exception as e:
-                print(f"[DEBUG] Error in mouse event handler: {e}")
-
-        try:
-            print("[DEBUG] Starting mouse listener...")
-            mouse.hook(on_mouse_event)
-            mouse.wait()
-        except Exception as e:
-            print(f"[DEBUG] Error in mouse listener thread: {e}")
 
 
 if __name__ == "__main__":

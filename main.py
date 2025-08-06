@@ -59,6 +59,8 @@ class App(ctk.CTk):
         self.send_alt_d_enabled = tk.BooleanVar(value=False)
         self.sending_alt_d = False
 
+        self.show_debug_window_enabled = tk.BooleanVar(value=False)
+
         self.build_ui()
 
         threading.Thread(target=self.global_keyboard_listener, daemon=True).start()
@@ -152,6 +154,9 @@ class App(ctk.CTk):
             entry.grid(row=i, column=1, padx=5, pady=2, sticky='w')
             self.morse_entries[field] = entry
 
+        self.show_debug_window_switch = ctk.CTkSwitch(self.morse_config_frame, text="显示调试窗口", variable=self.show_debug_window_enabled)
+        self.show_debug_window_switch.pack(anchor='w', padx=5, pady=5)
+
         quit_btn = ctk.CTkButton(self, text="退出程序", command=self.quit)
         quit_btn.pack(pady=10)
 
@@ -168,7 +173,7 @@ class App(ctk.CTk):
         if self.debug_switch.get():
             # 将配置框显示在滑块框的下方
             self.morse_config_frame.pack(fill='x', padx=10, pady=5, after=self.slider_frame)
-            self.geometry("480x500")  # 展开后的高度
+            self.geometry("480x540")  # 展开后的高度
         else:
             self.morse_config_frame.pack_forget()
             self.geometry("480x280")  # 收起后的高度
@@ -223,7 +228,7 @@ class App(ctk.CTk):
             try:
                 # 从输入框获取配置，并转换为整数
                 config = {key: int(entry.get()) for key, entry in self.morse_entries.items()}
-                config['debug'] = self.debug_switch.get()
+                config['debug'] = self.show_debug_window_enabled.get()
                 print(f"[DEBUG] Screenshot trigger activated with config: {config}")
                 # 使用 lambda 来传递参数
                 threading.Thread(target=lambda: MORSE_TOOLS.screenshot_game_and_sendCode(morse_config=config),

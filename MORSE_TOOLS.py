@@ -179,7 +179,7 @@ def extract_three_groups_and_decode(gray_img, method='kmeans', config=None):
     num2 = MORSE_CODE_DICT.get(code2, '?')
     num3 = MORSE_CODE_DICT.get(code3, '?')
 
-    if config and config.get('debug', False) == 1:
+    if config and config.get('debug', False):
         show_debug_window(gray_img, [(roi1, bin1, code1, num1),
                                      (roi2, bin2, code2, num2),
                                      (roi3, bin3, code3, num3)])

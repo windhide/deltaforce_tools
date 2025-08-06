@@ -1,3 +1,5 @@
+import base64
+import sys
 import time
 
 import customtkinter as ctk
@@ -6,10 +8,13 @@ import threading
 import keyboard
 import mouse
 import os
+import ctypes
 import MORSE_TOOLS
 from AUTO_TOOLS import AutoClicker
+from logo import img
 
 last_screenshot_path = None  # 全局变量，保存上一个截图路径
+
 def stop_anticheat_service():
     os.system("sc stop AntiCheatExpert")
 
@@ -31,9 +36,19 @@ class App(ctk.CTk):
         self.shortcut_label = None
         self.screenshot_switch = None
         self.service_switch = None
-        self.title("三角洲行动辅助工具")
+        base_title = "Delta行动小工具"
+        if self.is_admin():
+            self.title(f"{base_title} >admin")
+        else:
+            self.title(base_title)
         self.geometry("480x480")
         self.resizable(False, False)
+
+        icon = open("icon.ico", "wb+")
+        icon.write(base64.b64decode(img))  # 写入到临时文件中
+        icon.close()
+        self.iconbitmap("icon.ico")  # 设置图标
+        os.remove("icon.ico")  # 删除临时图标
 
         self.screenshot_enabled = tk.BooleanVar(value=False)
         self.shortcut_key = 'right'
@@ -143,6 +158,12 @@ class App(ctk.CTk):
 
         # 默认隐藏配置区域
         self.toggle_debug_mode() # 初始化时调用一次以保证状态正确
+
+    def is_admin(self):
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except:
+            return False
 
     def toggle_debug_mode(self):
         if self.debug_switch.get():

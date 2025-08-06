@@ -13,9 +13,14 @@ _✨ [deltaforce_tools]([https://github.com/AstrBotDevs/AstrBot](https://github.
 
 </div>
 
-# 创建项目的原因
+# 🥹创建项目的原因🥹
 
 一切的一切还要从好基友和我开同一个电脑，我速度开的没他快，从我嘴里掏走2个实验数据说起
+
+# 🔨构建指令🔨
+```shell
+pyinstaller deltaforce_tools.spec --noconfirm
+```
 
 # 介绍
 

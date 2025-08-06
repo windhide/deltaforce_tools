@@ -188,14 +188,21 @@ def extract_three_groups_and_decode(gray_img, method='kmeans', config=None):
 
 
 def show_debug_window(gray, group_data):
-    h, w = gray.shape
-    scale = 0.5
-    resized = cv2.resize(gray, (int(w * scale), int(h * scale)))
-    cv2.imshow("原图（灰度）", resized)
+    # 检查是否可以使用GUI功能
+    can_show_gui = hasattr(cv2, 'imshow')
 
+    if can_show_gui:
+        h, w = gray.shape
+        scale = 0.5
+        resized = cv2.resize(gray, (int(w * scale), int(h * scale)))
+        cv2.imshow("原图（灰度）", resized)
+
+        for i, (roi, binary, code, digit) in enumerate(group_data):
+            cv2.imshow(f"{i + 1}-original", roi)
+            cv2.imshow(f"{i + 1}-debug", binary)
+
+    # 无论如何都打印信息到控制台
     for i, (roi, binary, code, digit) in enumerate(group_data):
-        cv2.imshow(f"{i + 1}-original", roi)
-        cv2.imshow(f"{i + 1}-debug", binary)
         print(f"区域{i + 1} 摩斯码: {code} → 数字: {digit}")
 
     print("按任意键退出调试窗口...")

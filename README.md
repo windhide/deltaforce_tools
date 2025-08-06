@@ -45,12 +45,12 @@ pyinstaller deltaforce_tools.spec --noconfirm
 （你可以在此处放一个 GIF 或截图示例，展示键盘触发或摩斯识别过程）
 
 ## 📁 项目结构
-.
-├── main.py # 主程序入口
-├── MORSE_TOOLS.py # 摩斯图像识别逻辑
-├── AUTO_TOOLS.py # 键盘监听与操作模块
-├── README.md # 项目说明
-├── LICENSE # MIT 许可
+. <br>
+├── main.py # 主程序入口 <br>
+├── MORSE_TOOLS.py # 摩斯图像识别逻辑 <br>
+├── AUTO_TOOLS.py # 键盘监听与操作模块 <br>
+├── README.md # 项目说明 <br>
+├── LICENSE # MIT 许可 <br>
 └── requirements.txt # 所需依赖库
 
 

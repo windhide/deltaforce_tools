@@ -80,7 +80,6 @@ class AutoClicker:
 
     def stop_alt_d(self):
         with self.alt_d_lock:
-            # 不再检查 self.sending_alt_d.is_set()，直接尝试清除并设置不活跃
             if not self._is_alt_d_active: # 检查新的活跃标志
                 print("⚠️ Alt+D 发送未在进行中，忽略停止请求")
                 return

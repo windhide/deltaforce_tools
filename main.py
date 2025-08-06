@@ -45,9 +45,9 @@ class App(ctk.CTk):
         self.sending_alt_d = False
 
         self.build_ui()
-        self.register_shortcut(self.shortcut_key)
 
         threading.Thread(target=self.mouse_listener_thread, daemon=True).start()
+        threading.Thread(target=self.global_keyboard_listener, daemon=True).start()
 
     def build_ui(self):
         padding = {'padx': 10, 'pady': 5}
@@ -76,7 +76,7 @@ class App(ctk.CTk):
 
         self.alt_d_switch = ctk.CTkSwitch(
             alt_d_frame,
-            text="丢东西👉长按鼠标上侧键不断发送 Alt + D",
+            text="丢东西👉长按 ` 键不断发送 Alt + D",
             variable=self.send_alt_d_enabled
         )
         self.alt_d_switch.pack(side='left', padx=5)
@@ -131,48 +131,30 @@ class App(ctk.CTk):
         if self.service_switch.get():
             threading.Thread(target=stop_anticheat_service, daemon=True).start()
 
-    def register_shortcut(self, key):
-        # 移除旧的 hook
-        if hasattr(self, '_keyboard_hook_id') and self._keyboard_hook_id:
-            try:
-                keyboard.unhook(self._keyboard_hook_id)
-                print(f"[DEBUG] Successfully unhooked previous key: {key}")
-            except Exception as e:
-                print(f"[DEBUG] Error unhooking previous key: {e}")
-
-        def handler(e):
-            if e.event_type == 'down' and e.name == key:
-                print(f"[DEBUG] Key '{key}' pressed, triggering screenshot")
-                self.on_screenshot_trigger()
-
-        try:
-            self._keyboard_hook_id = keyboard.hook(handler)
-            print(f"[DEBUG] Successfully registered hook for key: {key}")
-        except Exception as e:
-            print(f"[DEBUG] Error registering hook for key '{key}': {e}")
-
     def change_shortcut(self):
-        win = tk.Toplevel(self)
-        win.title("按下新快捷键")
-        ctk.CTkLabel(win, text="请按下新的快捷键...").pack(padx=10, pady=10)
+        win = ctk.CTkToplevel(self)
+        win.title("设置新快捷键")
+        win.geometry("300x100")
+        win.transient(self)  # 保持在顶层
+        win.grab_set()  # 模态窗口
+        label = ctk.CTkLabel(win, text="请按下新的快捷键...")
+        label.pack(padx=20, pady=10)
 
-        def on_key(e):
-            if e.event_type == 'down': # 只处理按键按下事件
-                self.shortcut_key = e.name
-                self.shortcut_label.configure(text=f"快捷键：{self.shortcut_key}")
-                self.register_shortcut(self.shortcut_key)
-                try:
-                    keyboard.unhook(temp_hook_id)  # 正确卸载这个hook
-                    print(f"[DEBUG] Successfully unhooked temporary hook")
-                except Exception as e:
-                    print(f"[DEBUG] Error unhooking temporary hook: {e}")
-                win.destroy()
+        def on_key_press(e):
+            if e.event_type == 'down':
+                # 排除修饰键和常用功能键
+                if e.name not in ['alt', 'ctrl', 'shift', 'cmd', 'caps lock', 'tab', 'enter']:
+                    self.shortcut_key = e.name
+                    self.shortcut_label.configure(text=f"快捷键：{self.shortcut_key}")
+                    print(f"[DEBUG] Shortcut key changed to: {self.shortcut_key}")
+                    keyboard.unhook(on_key_press)
+                    win.destroy()
+                else:
+                    label.configure(text=f"'{e.name}' 不能作为快捷键，请重试")
 
-        try:
-            temp_hook_id = keyboard.hook(on_key)
-            print(f"[DEBUG] Temporary hook registered for shortcut change")
-        except Exception as e:
-            print(f"[DEBUG] Error registering temporary hook: {e}")
+        keyboard.hook(on_key_press)
+        self.wait_window(win)  # 等待窗口销毁
+
 
     def on_screenshot_trigger(self):
         if self.screenshot_enabled.get():
@@ -180,6 +162,26 @@ class App(ctk.CTk):
             threading.Thread(target=MORSE_TOOLS.screenshot_game_and_sendCode, daemon=True).start()
         else:
             print("[DEBUG] Screenshot is disabled, ignoring trigger")
+
+    def global_keyboard_listener(self):
+        def on_key(e):
+            # 截图快捷键
+            if self.screenshot_enabled.get() and e.event_type == 'down' and e.name == self.shortcut_key:
+                print(f"[DEBUG] Key '{self.shortcut_key}' pressed, triggering screenshot")
+                self.on_screenshot_trigger()
+
+            # 丢东西快捷键
+            if self.send_alt_d_enabled.get() and e.name == '`':
+                if e.event_type == 'down':
+                    if not self.autoclicker._is_alt_d_active:
+                        print("[DEBUG] ` key down, starting alt+d")
+                        self.autoclicker.start_alt_d()
+                elif e.event_type == 'up':
+                    if self.autoclicker._is_alt_d_active:
+                        print("[DEBUG] ` key up, stopping alt+d")
+                        self.autoclicker.stop_alt_d()
+
+        keyboard.hook(on_key)
 
     def mouse_listener_thread(self):
         import time
@@ -192,31 +194,17 @@ class App(ctk.CTk):
 
                 print(f"[DEBUG] Mouse event: {event.event_type} {event.button}")
 
-                if event.event_type == 'down' and event.button == 'x':
+                # 抢物品（自动点击）
+                if event.button == 'x': # 鼠标下侧键
                     if self.autoclicker_enabled.get():
-                        print("[DEBUG] Mouse x button down, starting clicking")
-                        self.autoclicker.start_clicking()
-
-                elif event.event_type == 'up' and event.button == 'x':
-                    # 只有在点击功能真正活跃时才尝试停止
-                    if self.autoclicker._is_clicking_active:
-                        print("[DEBUG] Mouse x button up, stopping clicking")
-                        self.autoclicker.stop_clicking()
-                    else:
-                        print("[DEBUG] Mouse x button up, but clicking not active, ignoring")
-
-                elif event.event_type == 'down' and event.button == 'x2':
-                    if self.send_alt_d_enabled.get():
-                        print("[DEBUG] Mouse x2 button down, starting alt+d")
-                        self.autoclicker.start_alt_d()
-
-                elif event.event_type == 'up' and event.button == 'x2':
-                    # 只有在Alt+D功能真正活跃时才尝试停止
-                    if self.autoclicker._is_alt_d_active:
-                        print("[DEBUG] Mouse x2 button up, stopping alt+d")
-                        self.autoclicker.stop_alt_d()
-                    else:
-                        print("[DEBUG] Mouse x2 button up, but alt+d not active, ignoring")
+                        if event.event_type == 'down':
+                            if not self.autoclicker._is_clicking_active:
+                                print("[DEBUG] Mouse x button down, starting clicking")
+                                self.autoclicker.start_clicking()
+                        elif event.event_type == 'up':
+                            if self.autoclicker._is_clicking_active:
+                                print("[DEBUG] Mouse x button up, stopping clicking")
+                                self.autoclicker.stop_clicking()
 
             except Exception as e:
                 print(f"[DEBUG] Error in mouse event handler: {e}")

@@ -33,13 +33,21 @@ def screenshot_game_and_sendCode():
             if not all(_morse_codes):
                 print("⚠️ 警告: 摩斯码识别结果为空或部分为空，可能未识别到有效信息。")
 
-            # 过滤掉无效的数字（例如 \'?\'）
-            valid_digits = [d for d in _digits if d != '\'?']
+            # 过滤掉无效的数字（例如 '?'）
+            valid_digits = [d for d in _digits if d != '?']
 
             if valid_digits:
+                print(f"✅ 准备发送数字: {valid_digits}")
                 for digit in valid_digits:
-                    keyboard.send(f"num {digit}")
-                    time.sleep(0.06)
+                    try:
+                        # 确保只发送有效的数字键
+                        if digit.isdigit():
+                            keyboard.send(f"num {digit}")
+                            time.sleep(0.06)
+                        else:
+                            print(f"⚠️ 警告: 识别到无效字符 '{digit}'，已跳过发送。")
+                    except Exception as e:
+                        print(f"❌ 发送按键 '{digit}' 时发生错误: {e}")
                 print(f"✅ 成功发送数字: {valid_digits}")
             else:
                 print("❌ 未识别到任何有效数字可发送。")

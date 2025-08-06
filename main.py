@@ -32,7 +32,7 @@ class App(ctk.CTk):
         self.screenshot_switch = None
         self.service_switch = None
         self.title("三角洲行动辅助工具")
-        self.geometry("480x280")
+        self.geometry("480x480")
         self.resizable(False, False)
 
         self.screenshot_enabled = tk.BooleanVar(value=False)
@@ -57,6 +57,9 @@ class App(ctk.CTk):
         self.service_switch = ctk.CTkSwitch(status_frame, text="关闭ACE服务(AntiCheatExpert)",
                                             command=self.toggle_service)
         self.service_switch.pack(side='left', padx=5)
+
+        self.debug_switch = ctk.CTkSwitch(status_frame, text="调试模式", command=self.toggle_debug_mode)
+        self.debug_switch.pack(side='right', padx=11)
 
         screenshot_frame = ctk.CTkFrame(self)
         screenshot_frame.pack(fill='x', **padding)
@@ -92,24 +95,63 @@ class App(ctk.CTk):
         self.autoclicker_switch.pack(side='left', padx=5)
 
         # 点击速度调节
-        slider_frame = ctk.CTkFrame(self)
-        slider_frame.pack(fill='x', **padding)
+        self.slider_frame = ctk.CTkFrame(self)
+        self.slider_frame.pack(fill='x', **padding)
 
-        speed_label = ctk.CTkLabel(slider_frame, text="间隔（秒，数值越小点击越快）")
+        speed_label = ctk.CTkLabel(self.slider_frame, text="间隔（秒，数值越小点击越快）")
         speed_label.pack(anchor='w', padx=5)
 
-        self.speed_slider = ctk.CTkSlider(slider_frame, from_=0.05, to=0.1, number_of_steps=50,
+        self.speed_slider = ctk.CTkSlider(self.slider_frame, from_=0.05, to=0.1, number_of_steps=50,
                                           command=self.on_speed_change)
         self.speed_slider.set(int(self.autoclicker.click_interval * 100))
         self.speed_slider.pack(fill='x', padx=10)
 
-        self.speed_value_label = ctk.CTkLabel(slider_frame, text=f"{self.autoclicker.click_interval:.3f} 秒")
+        self.speed_value_label = ctk.CTkLabel(self.slider_frame, text=f"{self.autoclicker.click_interval:.3f} 秒")
         self.speed_value_label.pack(anchor='e', padx=10)
 
         self.speed_slider.configure(state='disabled')
 
+        # 摩斯码识别区域配置
+        self.morse_config_frame = ctk.CTkFrame(self)
+        # self.morse_config_frame.pack(fill='x', **padding) # 先不pack，由toggle_debug_mode控制
+
+        morse_label = ctk.CTkLabel(self.morse_config_frame, text="摩斯码识别区域配置：")
+        morse_label.pack(anchor='w', padx=5)
+
+        # 使用 grid 布局来对齐标签和输入框
+        grid_frame = ctk.CTkFrame(self.morse_config_frame)
+        grid_frame.pack(fill='x', padx=5, pady=5)
+
+        self.morse_entries = {}
+        config_fields = {
+            'top': '上边界 (top)', 'bottom': '下边界 (bottom)',
+            'group_width': '区域宽度', 'spacing': '区域间隔',
+            'group1_x': '起始位置 (x)'
+        }
+        default_values = {'top': 510, 'bottom': 570, 'group_width': 200, 'spacing': 65, 'group1_x': 700, 'debug': False}
+
+        for i, (field, text) in enumerate(config_fields.items()):
+            label = ctk.CTkLabel(grid_frame, text=text)
+            label.grid(row=i, column=0, padx=5, pady=2, sticky='w')
+            entry = ctk.CTkEntry(grid_frame, width=100)
+            entry.insert(0, str(default_values[field]))
+            entry.grid(row=i, column=1, padx=5, pady=2, sticky='w')
+            self.morse_entries[field] = entry
+
         quit_btn = ctk.CTkButton(self, text="退出程序", command=self.quit)
         quit_btn.pack(pady=10)
+
+        # 默认隐藏配置区域
+        self.toggle_debug_mode() # 初始化时调用一次以保证状态正确
+
+    def toggle_debug_mode(self):
+        if self.debug_switch.get():
+            # 将配置框显示在滑块框的下方
+            self.morse_config_frame.pack(fill='x', padx=10, pady=5, after=self.slider_frame)
+            self.geometry("480x500")  # 展开后的高度
+        else:
+            self.morse_config_frame.pack_forget()
+            self.geometry("480x280")  # 收起后的高度
 
     def on_autoclicker_toggle(self):
         enabled = self.autoclicker_enabled.get()
@@ -158,8 +200,20 @@ class App(ctk.CTk):
 
     def on_screenshot_trigger(self):
         if self.screenshot_enabled.get():
-            print("[DEBUG] Screenshot trigger activated, starting thread")
-            threading.Thread(target=MORSE_TOOLS.screenshot_game_and_sendCode, daemon=True).start()
+            try:
+                # 从输入框获取配置，并转换为整数
+                config = {key: int(entry.get()) for key, entry in self.morse_entries.items()}
+                config['debug'] = self.debug_switch.get()
+                print(f"[DEBUG] Screenshot trigger activated with config: {config}")
+                # 使用 lambda 来传递参数
+                threading.Thread(target=lambda: MORSE_TOOLS.screenshot_game_and_sendCode(morse_config=config),
+                                 daemon=True).start()
+            except ValueError:
+                print("❌ 错误: 摩斯码识别区域配置中包含了无效的非整数值。")
+                # 可以在这里弹出一个错误提示框
+                tk.messagebox.showerror("输入错误", "摩斯码识别区域配置中只能输入整数！")
+            except Exception as e:
+                print(f"❌ 触发截图时发生未知错误: {e}")
         else:
             print("[DEBUG] Screenshot is disabled, ignoring trigger")
 

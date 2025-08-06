@@ -18,7 +18,7 @@ MORSE_CODE_DICT = {
 }
 
 
-def screenshot_game_and_sendCode():
+def screenshot_game_and_sendCode(morse_config=None):
     try:
         with mss.mss() as sct:
             monitor = sct.monitors[1]  # 主屏幕
@@ -27,7 +27,7 @@ def screenshot_game_and_sendCode():
 
             # 转换为灰度图（只保留亮度）
             _gray = cv2.cvtColor(img2, cv2.COLOR_BGRA2GRAY)
-            _morse_codes, _digits = extract_three_groups_and_decode(_gray, method="simple_cluster")
+            _morse_codes, _digits = extract_three_groups_and_decode(_gray, method="simple_cluster", config=morse_config)
 
             # 检查 _morse_codes 是否为空，如果为空则打印警告但不直接返回
             if not all(_morse_codes):
@@ -148,12 +148,22 @@ def decode_morse_from_image(image, method='kmeans'):
     return ''.join(symbols), binary
 
 
-def extract_three_groups_and_decode(gray_img, method='kmeans'):
-    top = 510
-    bottom = 570
-    group_width = 200
-    spacing = 65
-    group1_x = 700
+def extract_three_groups_and_decode(gray_img, method='kmeans', config=None):
+    if config:
+        top = config.get('top', 510)
+        bottom = config.get('bottom', 570)
+        group_width = config.get('group_width', 200)
+        spacing = config.get('spacing', 65)
+        group1_x = config.get('group1_x', 700)
+    else:
+        # 如果没有提供配置，则使用默认值
+        top = 510
+        bottom = 570
+        group_width = 200
+        spacing = 65
+        group1_x = 700
+
+    print(f"当前配置--- top->{top} bottom->{bottom} group->{group_width} spacing->{spacing} group1-x->{group1_x}")
     group2_x = group1_x + group_width + spacing
     group3_x = group2_x + group_width + spacing
 
@@ -169,28 +179,28 @@ def extract_three_groups_and_decode(gray_img, method='kmeans'):
     num2 = MORSE_CODE_DICT.get(code2, '?')
     num3 = MORSE_CODE_DICT.get(code3, '?')
 
-    show_debug_window(gray_img, [(roi1, bin1, code1, num1),
-                                 (roi2, bin2, code2, num2),
-                                 (roi3, bin3, code3, num3)])
+    if config and config.get('debug', False) == 1:
+        show_debug_window(gray_img, [(roi1, bin1, code1, num1),
+                                     (roi2, bin2, code2, num2),
+                                     (roi3, bin3, code3, num3)])
 
     return (code1, code2, code3), (num1, num2, num3)
 
 
 def show_debug_window(gray, group_data):
-    return
-    # h, w = gray.shape
-    # scale = 0.5
-    # resized = cv2.resize(gray, (int(w * scale), int(h * scale)))
-    # cv2.imshow("原图（灰度）", resized)
-    #
-    # for i, (roi, binary, code, digit) in enumerate(group_data):
-    #     cv2.imshow(f"{i + 1}-original", roi)
-    #     cv2.imshow(f"{i + 1}-debug", binary)
-    #     print(f"区域{i + 1} 摩斯码: {code} → 数字: {digit}")
-    #
-    # print("按任意键退出调试窗口...")
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    h, w = gray.shape
+    scale = 0.5
+    resized = cv2.resize(gray, (int(w * scale), int(h * scale)))
+    cv2.imshow("原图（灰度）", resized)
+
+    for i, (roi, binary, code, digit) in enumerate(group_data):
+        cv2.imshow(f"{i + 1}-original", roi)
+        cv2.imshow(f"{i + 1}-debug", binary)
+        print(f"区域{i + 1} 摩斯码: {code} → 数字: {digit}")
+
+    print("按任意键退出调试窗口...")
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

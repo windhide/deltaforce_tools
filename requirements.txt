@@ -4,3 +4,4 @@ mouse==0.7.1
 opencv-python==4.12.0.88
 mss==10.0.0
 numpy==2.2.6
+pyinstaller

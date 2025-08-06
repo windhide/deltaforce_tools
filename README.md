@@ -40,10 +40,6 @@ pyinstaller deltaforce_tools.spec --noconfirm
 - 解码结果通过键盘事件自动输入，无需人工干预。
 - 支持动态识别与多次输入循环。
 
-## 📷 应用示意
-
-（你可以在此处放一个 GIF 或截图示例，展示键盘触发或摩斯识别过程）
-
 ## 📁 项目结构
 . <br>
 ├── main.py # 主程序入口 <br>

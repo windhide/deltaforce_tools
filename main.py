@@ -163,11 +163,18 @@ class App(ctk.CTk):
         self.show_debug_window_switch = ctk.CTkSwitch(self.morse_config_frame, text="显示调试窗口", variable=self.show_debug_window_enabled)
         self.show_debug_window_switch.pack(anchor="w", padx=5, pady=5)
 
-        quit_btn = ctk.CTkButton(self, text="退出程序", command=self.quit)
+        quit_btn = ctk.CTkButton(self, text="退出程序", command=self.on_closing)
         quit_btn.pack(pady=10)
+
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # 默认隐藏配置区域
         self.toggle_debug_mode() # 初始化时调用一次以保证状态正确
+
+    def on_closing(self):
+        print("程序退出，卸载键盘钩子...")
+        keyboard.unhook_all()
+        self.destroy()
 
     def is_admin(self):
         try:

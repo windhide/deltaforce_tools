@@ -17,6 +17,29 @@ MORSE_CODE_DICT = {
     '----.': '9'
 }
 
+resolution_config_map = {
+    "1080P":{
+        "top": 380,
+        "bottom": 420,
+        "group_width": 140,
+        "spacing": 60,
+        "group1_x": 530
+    },
+    "2K":{
+        "top":  510,
+        "bottom":  570,
+        "group_width":  200,
+        "spacing":  65,
+        "group1_x":  700
+    },
+    "4K":{
+        "top":  780,
+        "bottom":  850,
+        "group_width":  320,
+        "spacing":  70,
+        "group1_x":  1050
+    }
+}
 
 def screenshot_game_and_sendCode(morse_config=None):
     try:
@@ -157,11 +180,11 @@ def extract_three_groups_and_decode(gray_img, method='kmeans', config=None):
         group1_x = config.get('group1_x', 700)
     else:
         # 如果没有提供配置，则使用默认值
-        top = 510
-        bottom = 570
-        group_width = 200
-        spacing = 65
-        group1_x = 700
+        top = 380
+        bottom = 420
+        group_width = 140
+        spacing = 60
+        group1_x = 530
 
     print(f"当前配置--- top->{top} bottom->{bottom} group->{group_width} spacing->{spacing} group1-x->{group1_x}")
     group2_x = group1_x + group_width + spacing
@@ -181,8 +204,8 @@ def extract_three_groups_and_decode(gray_img, method='kmeans', config=None):
 
     if config and config.get('debug', False):
         show_debug_window(gray_img, [(roi1, bin1, code1, num1),
-                                     (roi2, bin2, code2, num2),
-                                     (roi3, bin3, code3, num3)])
+                                 (roi2, bin2, code2, num2),
+                                 (roi3, bin3, code3, num3)])
 
     return (code1, code2, code3), (num1, num2, num3)
 

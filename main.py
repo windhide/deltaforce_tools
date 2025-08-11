@@ -35,7 +35,7 @@ class App(ctk.CTk):
             self.title(f"{base_title} > admin")
         else:
             self.title(base_title)
-        self.geometry("480x180")
+        self.geometry("480x130")
         self.resizable(False, False)
 
         icon = open("icon.ico", "wb+")
@@ -141,7 +141,7 @@ class App(ctk.CTk):
             # 调试模式关闭：隐藏手动配置，显示下拉框
             self.morse_config_frame.pack_forget()
             self.resolution_option_menu.pack(side="left", padx=5)
-            self.geometry("480x180")  # 收起后的高度
+            self.geometry("480x130")  # 收起后的高度
 
     def toggle_service(self):
         if self.service_switch.get():

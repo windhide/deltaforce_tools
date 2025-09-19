@@ -32,6 +32,13 @@ resolution_config_map = {
         "spacing":  65,
         "group1_x":  700
     },
+    "2.5K":{
+        "top":  600,
+        "bottom":  640,
+        "group_width":  180,
+        "spacing":  87,
+        "group1_x":  710
+    },
     "4K":{
         "top":  780,
         "bottom":  850,
